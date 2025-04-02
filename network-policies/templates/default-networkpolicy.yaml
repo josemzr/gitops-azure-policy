@@ -1,0 +1,14 @@
+# templates/default-networkpolicy.yaml - only intra-NS traffic allowed
+# This NetworkPolicy allows all ingress traffic from pods in the same namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all-except-same-namespace
+  namespace: PLACEHOLDER_NAMESPACE
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - podSelector: {}
+  policyTypes:
+    - Ingress

@@ -1,0 +1,100 @@
+{
+  "properties": {
+    "displayName": "AKS clusters should have NetworkPolicies that restrict pod traffic to same namespace",
+    "description": "This policy audits AKS clusters to ensure that all namespaces have a NetworkPolicy that restricts pod communication to pods within the same namespace.",
+    "policyType": "Custom",
+    "mode": "Microsoft.Kubernetes.Data",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Kubernetes"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "audit",
+        "allowedValues": [
+          "audit",
+          "deny",
+          "disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the execution of the policy"
+        }
+      },
+      "excludedNamespaces": {
+        "type": "Array",
+        "defaultValue": [
+          "kube-system",
+          "kube-public",
+          "kube-node-lease",
+          "gatekeeper-system"
+        ],
+        "metadata": {
+          "displayName": "Excluded Namespaces",
+          "description": "List of Kubernetes namespaces to exclude from policy evaluation"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "field": "type",
+        "in": [
+          "Microsoft.ContainerService/managedClusters",
+          "Microsoft.Kubernetes/connectedClusters"
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]",
+        "details": {
+          "templateInfo": {
+            "sourceType": "Static",
+            "content": {
+              "apiVersion": "templates.gatekeeper.sh/v1beta1",
+              "kind": "ConstraintTemplate",
+              "metadata": {
+                "name": "k8srequirednetworkpolicy"
+              },
+              "spec": {
+                "crd": {
+                  "spec": {
+                    "names": {
+                      "kind": "K8sRequiredNetworkPolicy"
+                    }
+                  }
+                },
+                "targets": [
+                  {
+                    "target": "admission.k8s.gatekeeper.sh",
+                    "rego": "package k8srequirednetworkpolicy\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Namespace\"\n\n  not namespace_has_valid_network_policy\n\n  msg := sprintf(\"Namespace '%s' does not have a NetworkPolicy that restricts traffic to the same namespace\", [input.review.object.metadata.name])\n}\n\nnamespace_has_valid_network_policy {\n  some np\n  np := data.inventory.namespace[input.review.object.metadata.name][\"networking.k8s.io/v1\"][\"NetworkPolicy\"][_]\n  \n  # Verify the policy has ingress rules\n  ingress := np.spec.ingress[_]\n  \n  # Verify there's a podSelector (might be empty which means all pods)\n  from := ingress.from[_]\n  from.podSelector != null\n  \n  # No namespaceSelector should be present to ensure only same-namespace communication\n  not from.namespaceSelector\n}"
+                  }
+                ]
+              }
+            }
+          },
+          "constraintInfo": {
+            "sourceType": "Static",
+            "content": {
+              "apiVersion": "constraints.gatekeeper.sh/v1beta1",
+              "kind": "K8sRequiredNetworkPolicy",
+              "metadata": {
+                "name": "require-same-namespace-traffic-policy"
+              },
+              "spec": {
+                "match": {
+                  "kinds": [
+                    {
+                      "apiGroups": [""],
+                      "kinds": ["Namespace"]
+                    }
+                  ],
+                  "excludedNamespaces": "[parameters('excludedNamespaces')]"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

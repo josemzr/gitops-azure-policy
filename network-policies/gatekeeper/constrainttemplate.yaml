@@ -1,0 +1,37 @@
+# gatekeeper/constrainttemplate.yaml
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequirednetworkpolicy
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequiredNetworkPolicy
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequirednetworkpolicy
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Namespace"
+
+          not namespace_has_valid_network_policy
+
+          msg := sprintf("Namespace '%s' does not have a NetworkPolicy that restricts traffic to the same namespace", [input.review.object.metadata.name])
+        }
+
+        namespace_has_valid_network_policy {
+          some np
+          np := data.inventory.namespace[input.review.object.metadata.name]["networking.k8s.io/v1"]["NetworkPolicy"][_]
+          
+          # Verify the policy has ingress rules
+          ingress := np.spec.ingress[_]
+          
+          # Verify there's a podSelector (might be empty which means all pods)
+          from := ingress.from[_]
+          from.podSelector != null
+          
+          # No namespaceSelector should be present to ensure only same-namespace communication
+          not from.namespaceSelector
+        }

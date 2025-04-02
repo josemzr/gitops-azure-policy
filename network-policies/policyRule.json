@@ -1,0 +1,19 @@
+{
+  "if": {
+    "allOf": [
+      {
+        "field": "type",
+        "equals": "Microsoft.Kubernetes.Data/namespaces"
+      },
+      {
+        "not": {
+          "field": "Microsoft.Kubernetes.Data/namespaces/networking.k8s.io~1v1~1NetworkPolicy",
+          "exists": "true"
+        }
+      }
+    ]
+  },
+  "then": {
+    "effect": "audit"
+  }
+}

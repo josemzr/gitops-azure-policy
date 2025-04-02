@@ -1,0 +1,13 @@
+# cluster-policy/generator.yaml - uses Kustomize generators to apply by label
+apiVersion: builtin
+kind: NamespaceTransformer
+metadata:
+  name: restrict-ns-traffic
+namespace: ''
+fieldSpecs:
+  - path: metadata/namespace
+    kind: NetworkPolicy
+    create: true
+    version: v1
+    group: networking.k8s.io
+    value: metadata.name

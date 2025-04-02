@@ -1,0 +1,36 @@
+{
+  "properties": {
+    "displayName": "AKS Network Security Compliance Initiative",
+    "description": "This initiative groups policies related to network security in Kubernetes clusters on Azure",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Kubernetes"
+    },
+    "parameters": {
+      "effect": {
+        "type": "String",
+        "defaultValue": "Audit",
+        "allowedValues": [
+          "Audit",
+          "Deny",
+          "Disabled"
+        ],
+        "metadata": {
+          "displayName": "Effect",
+          "description": "Enable or disable the execution of the policy"
+        }
+      }
+    },
+    "policyDefinitions": [
+      {
+        "policyDefinitionId": "/providers/Microsoft.Authorization/policyDefinitions/PLACEHOLDER_REPLACE_WITH_ACTUAL_POLICY_ID",
+        "policyDefinitionReferenceId": "requireSameNamespaceNetworkPolicy",
+        "parameters": {
+          "effect": {
+            "value": "[parameters('effect')]"
+          }
+        }
+      }
+    ]
+  }
+}
